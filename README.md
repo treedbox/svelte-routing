@@ -19,23 +19,25 @@ npm install --save svelte-routing
 ```html
 <!-- App.svelte -->
 <script>
-  import { Router, Link, Route } from "svelte-routing";
-  import { Home, About, Blog, BlogPost } from "./routes";
-
+  import { Router, Route } from "svelte-routing";
+  import NavLink from "./components/NavLink.svelte";
+  import Home from "./routes/Home.svelte";
+  import About from "./routes/About.svelte";
+  import Blog from "./routes/Blog.svelte";
+  // Used for SSR. A falsy value is ignored by the Router.
   export let url = "";
 </script>
 
 <Router url="{url}">
   <nav>
-    <Link to="/">Home</Link>
-    <Link to="about">About</Link>
-    <Link to="blog">Blog</Link>
+    <NavLink to="/">Home</NavLink>
+    <NavLink to="about">About</NavLink>
+    <NavLink to="blog">Blog</NavLink>
   </nav>
   <div>
-    <Route path="blog/:id" component="{BlogPost}" />
-    <Route path="blog" component="{Blog}" />
     <Route path="about" component="{About}" />
-    <Route path="/"><Home /></Route>
+    <Route path="blog/*" component="{Blog}" />
+    <Route path="/" component="{Home}" />
   </div>
 </Router>
 ```
@@ -44,7 +46,7 @@ npm install --save svelte-routing
 // main.js
 import App from "./App.svelte";
 
-const app = new App({
+new App({
   target: document.getElementById("app"),
   hydrate: true
 });
@@ -52,20 +54,30 @@ const app = new App({
 
 ```javascript
 // server.js
-const { createServer } = require("http");
-const app = require("./dist/App.js");
+const path = require("path");
+const express = require("express");
+const app = require("./public/App.js");
 
-createServer((req, res) => {
+const server = express();
+
+server.use(express.static(path.join(__dirname, "public")));
+
+server.get("*", function(req, res) {
   const { html } = app.render({ url: req.url });
 
   res.write(`
     <!DOCTYPE html>
+    <link rel='stylesheet' href='/global.css'>
+    <link rel='stylesheet' href='/bundle.css'>
     <div id="app">${html}</div>
-    <script src="/dist/bundle.js"></script>
+    <script src="/bundle.js"></script>
   `);
 
   res.end();
-}).listen(3000);
+});
+
+const port = 3000;
+server.listen(port, () => console.log(`Listening on port ${port}`));
 ```
 
 ## API
